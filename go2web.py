@@ -34,7 +34,8 @@ def make_http_request(url: str) -> dict:
         data = socc.recv(DATA_PER_REQUEST)
         recived_data += data.decode(recived_charset)
 
-        if len(data) < DATA_PER_REQUEST:
+        # TODO: Fix this
+        if "</html>" in recived_data:
             break
     
     socc.close()
@@ -51,19 +52,34 @@ def make_http_request(url: str) -> dict:
         "headers": headers,
     }
 
-    if response["code"] == "200":
+    if response["code"][0] != '4' or response["code"][0] != '5':
         if "text/html" in response["headers"]["Content-Type"]:
-            response["body"] = re.search(r"<!DOCTYPE html>.*?</html>", recived_data, re.DOTALL | re.IGNORECASE).group(0)
+            print(recived_data)
+            body = re.search(r"<!DOCTYPE html>.*?</html>", recived_data, re.DOTALL | re.IGNORECASE)
+            response["body"] = body.group(0) if body else ""
         elif "text/plain" in response["headers"]["Content-Type"]:
             response["body"] = recived_data.split("\r\n\r\n", 1)[1]
         elif "application/json" in response["headers"]["Content-Type"]:
             response["body"] = json.loads(recived_data.split("\r\n\r\n", 1)[1])
 
+    else:
+        raise Exception(f"Request failed with status code {response['code']}")
+
     return response
 
 
 def google_search(query: str) -> list:
-    ...
+    response = make_http_request(f"www.google.com/search?q={query}&num=10&hl=en&lr=lang_en")
+    print(response)
+
+    if response["code"] != "200":
+        raise Exception("Failed to make the request to Google")
+
+    soup = bs4.BeautifulSoup(response["body"], "html.parser")
+    results = soup.find_all("h3")
+
+    return results
+
 
 
 def main(args: list):
@@ -80,7 +96,9 @@ def main(args: list):
         return
     
     if args[0] == '-s':
-        print(json.dumps(google_search(args[1]), indent=4))
+        search_results = google_search(args[1])
+        for result in search_results:
+            print(result)
         return
 
 
