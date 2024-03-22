@@ -25,7 +25,21 @@ def google_search(query: str) -> list:
 
 
 def main(args: list):
-    ...
+    if len(args) == 0:
+        print_help()
+        return
+    
+    if args[0] == '-h':
+        print_help()
+        return
+
+    if args[0] == '-u':
+        print(json.dumps(make_http_request(args[1]), indent=4))
+        return
+    
+    if args[0] == '-s':
+        print(json.dumps(google_search(args[1]), indent=4))
+        return
 
 
 if __name__ == '__main__':
