@@ -17,7 +17,29 @@ def print_help():
 
 
 def make_http_request(url: str) -> dict:
-    ...
+    url = url.replace("http://", "").replace("https://", "")
+    recived_charset = "latin-1"
+    recived_data = ""
+
+    try:
+        host, path = url.split('/', 1)
+    except ValueError:
+        host, path = url, ""
+    
+    socc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    socc.connect((host, 80))
+    socc.send(f"GET /{path} HTTP/1.1\r\nHost: {host}\r\n\r\n".encode("utf-8"))
+
+    while True:
+        data = socc.recv(DATA_PER_REQUEST)
+        recived_data += data.decode(recived_charset)
+
+        if len(data) < DATA_PER_REQUEST:
+            break
+    
+    socc.close()
+
+    return {"data": recived_data}
 
 
 def google_search(query: str) -> list:
