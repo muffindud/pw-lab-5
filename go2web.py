@@ -39,7 +39,27 @@ def make_http_request(url: str) -> dict:
     
     socc.close()
 
-    return {"data": recived_data}
+    head_section = recived_data.split("\r\n\r\n", 1)[0]
+    headers = {}
+
+    for header in head_section.split("\r\n")[1:]:
+        key, value = header.split(": ", 1)
+        headers[key] = value
+    
+    response = {
+        "code": recived_data.split("\r\n", 1)[0].split(" ")[1],
+        "headers": headers,
+    }
+
+    if response["code"] == "200":
+        if "text/html" in response["headers"]["Content-Type"]:
+            response["body"] = re.search(r"<!DOCTYPE html>.*?</html>", recived_data, re.DOTALL | re.IGNORECASE).group(0)
+        elif "text/plain" in response["headers"]["Content-Type"]:
+            response["body"] = recived_data.split("\r\n\r\n", 1)[1]
+        elif "application/json" in response["headers"]["Content-Type"]:
+            response["body"] = json.loads(recived_data.split("\r\n\r\n", 1)[1])
+
+    return response
 
 
 def google_search(query: str) -> list:
