@@ -181,7 +181,7 @@ def main(args: list):
         url = args[1]
         response = make_http_request(url)
         response = parse_request(response)
-        print(json.dumps(response, indent=4))
+        # print(json.dumps(response, indent=4))
         print(parse_body(response))
 
         return
