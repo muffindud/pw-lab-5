@@ -7,7 +7,7 @@
 - [x] Add link fetch
 - [x] Add keyword search
 - [x] Add request parsing
-- [ ] Add search parsing
+- [x] Add search parsing
 - [x] Add HTML/JSON parsing
 - [x] Add cache mechanism
 - [x] Add content handling (JSON, XML, HTML)

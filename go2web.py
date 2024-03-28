@@ -144,15 +144,24 @@ def parse_body(response: dict) -> str:
 
 def keyword_search(query: str) -> list:
     query = query.replace(" ", "+")
-    og_url = f"https://www.duckduckgo.com/html?q={query}&kp=1"
-    response = make_http_request(og_url)
+    url = f"http://www.duckduckgo.com/html?q={query}&kp=1"
+    response = make_http_request(url)
     response = parse_request(response)
 
     if response["code"][0] != "2":
         raise Exception("Failed to make the request to the search engine.")
 
     soup = bs4.BeautifulSoup(response["body"], "html.parser")
-    results = soup.find_all("h2")
+    html_results = soup.find_all("h2")
+
+    results = []
+    for result in html_results:
+        title = result.get_text().replace("\n", "").strip()
+        search_url = re.search(r"//duckduckgo.com/l/\?uddg=(.*?)&rut=", result.a["href"], re.DOTALL).group(1)
+        #parse the % encoded url
+        search_url = search_url.replace("%3A", ":").replace("%2F", "/").replace("%3F", "?").replace("%3D", "=").replace("%26", "&")
+
+        results.append({"title": title, "url": search_url})
 
     return results
 
@@ -181,7 +190,9 @@ def main(args: list):
         search_results = keyword_search(" ".join(args[1:]).replace(" ", "+"))
 
         for result in search_results:
-            print(result)
+            print(result["title"])
+            print(result["url"])
+            print()
 
         return
 
