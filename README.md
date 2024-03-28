@@ -6,8 +6,9 @@
 - [x] Add help command
 - [x] Add link fetch
 - [x] Add keyword search
-- [ ] Add request parsing
+- [x] Add request parsing
+- [ ] Add search parsing
 - [x] Add HTML/JSON parsing
 - [x] Add cache mechanism
-- [ ] Add content negotiation (JSON, XML, HTML)
+- [x] Add content handling (JSON, XML, HTML)
 - [ ] Add gif with working example

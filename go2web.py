@@ -120,9 +120,31 @@ def parse_request(request: str) -> dict:
     return response
 
 
+def parse_body(response: dict) -> str:
+    body = response["body"]
+    soup = bs4.BeautifulSoup(body, "html.parser")
+    text = soup.get_text()
+
+    while "\n\n\n" in text:
+        text = text.replace("\n\n\n", "\n")
+
+    links = soup.find_all("a")
+    for link in links:
+        text += f"\n{link['href']}"
+
+    # images = soup.find_all("img")
+
+    # for image in images:
+    #     if url[-1] == "/":
+    #         url = url[:-1]
+    #     text += f"\n{url}{image['src']}"
+
+    return text
+
+
 def keyword_search(query: str) -> list:
     query = query.replace(" ", "+")
-    og_url = f"http://www.duckduckgo.com/html?q={query}&kp=1"
+    og_url = f"https://www.duckduckgo.com/html?q={query}&kp=1"
     response = make_http_request(og_url)
     response = parse_request(response)
 
@@ -147,10 +169,11 @@ def main(args: list):
         return
 
     if args[0] == '-u':
-        og_url = args[1]
-        response = make_http_request(og_url)
+        url = args[1]
+        response = make_http_request(url)
         response = parse_request(response)
         print(json.dumps(response, indent=4))
+        print(parse_body(response))
 
         return
 
