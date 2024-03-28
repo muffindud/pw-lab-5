@@ -2,6 +2,14 @@
 
 # Websockets
 
+# Working example:
+
+### Url request:
+![Url request](examples/url_fetch.gif)
+
+### Keyword search:
+![Keyword search](examples/keyword_search.gif)
+
 # TODOs:
 - [x] Add help command
 - [x] Add link fetch
@@ -11,4 +19,4 @@
 - [x] Add HTML/JSON parsing
 - [x] Add cache mechanism
 - [x] Add content handling (JSON, XML, HTML)
-- [ ] Add gif with working example
+- [x] Add gif with working example
