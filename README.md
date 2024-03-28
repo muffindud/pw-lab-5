@@ -1,4 +1,4 @@
-# # Web Programming Laboratory Work No. 5
+# Web Programming Laboratory Work No. 5
 
 # Websockets
 
@@ -7,7 +7,7 @@
 - [x] Add link fetch
 - [x] Add keyword search
 - [ ] Add request parsing
-- [ ] Add HTML/JSON parsing
-- [ ] Add cache mechanism
+- [x] Add HTML/JSON parsing
+- [x] Add cache mechanism
 - [ ] Add content negotiation (JSON, XML, HTML)
 - [ ] Add gif with working example

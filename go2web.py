@@ -5,11 +5,14 @@ import json
 import socket
 import ssl
 import sys
+import os
 import re
+
+from time import time
 
 
 DATA_PER_REQUEST = 1024
-
+MAX_CACHE_SECONDS = 60 * 60 * 24
 
 def print_help():
     print("go2web -u <URL>         # make an HTTP request to the specified URL and print the response")
@@ -18,20 +21,38 @@ def print_help():
 
 
 def make_http_request(url: str) -> str:
+    current_time = time()
+
+    if not os.path.exists(f"cache/cache_manager.json"):
+        with open(f"cache/cache_manager.json", "w") as file:
+            file.write("{}")
+
+    with open(f"cache/cache_manager.json", "r") as file:
+        cache_manager = json.loads(file.read())
+
+    if url in cache_manager.keys():
+        file_time = cache_manager[url]
+
+        if current_time - file_time < MAX_CACHE_SECONDS:
+            with open(f"cache/{file_time}.txt", "r") as file:
+                return file.read()
+        else:
+            os.remove(f"cache/{file_time}.txt")
+            del cache_manager[url]
+
     port = 80
-    
+
     if url.startswith("https://"):
         port = 443
         context = ssl.SSLContext(ssl.PROTOCOL_TLS)
 
-    url = url.replace("http://", "").replace("https://", "")
     recived_charset = "latin-1"
     recived_data = ""
 
     try:
-        host, path = url.split('/', 1)
+        host, path = url.replace("http://", "").replace("https://", "").split('/', 1)
     except ValueError:
-        host, path = url, ""
+        host, path = url.replace("http://", "").replace("https://", ""), ""
 
 
     if port == 443:
@@ -42,7 +63,7 @@ def make_http_request(url: str) -> str:
         socc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     socc.connect((host, port))
-    socc.sendall(f"GET /{path} HTTP/1.1\r\nHost: {host}\r\nConnection: close\r\n\r\n".encode())
+    socc.sendall(f"GET /{path} HTTP/1.1\nHost: {host}\nConnection: close\n\n".encode())
 
     while True:
         data = socc.recv(DATA_PER_REQUEST)
@@ -52,21 +73,30 @@ def make_http_request(url: str) -> str:
 
         recived_data += data.decode(recived_charset)
 
+    recived_data = recived_data.replace("\r\n", "\n")
+
     socc.close()
+
+    with open(f"cache/{current_time}.txt", "w") as file:
+        file.write(recived_data)
+
+    with open(f"cache/cache_manager.json", "w") as file:
+        cache_manager[url] = current_time
+        file.write(json.dumps(cache_manager, indent=4))
 
     return recived_data
 
 
 def parse_request(request: str) -> dict:
-    head_section = request.split("\r\n\r\n", 1)[0]
+    head_section = request.split("\n\n", 1)[0]
     headers = {}
 
-    for header in head_section.split("\r\n")[1:]:
+    for header in head_section.split("\n")[1:]:
         key, value = header.split(": ", 1)
         headers[key] = value
     
     response = {
-        "code": head_section.split("\r\n", 1)[0].split(" ")[1],
+        "code": head_section.split("\n", 1)[0].split(" ")[1],
         "headers": headers,
     }
 
@@ -75,9 +105,9 @@ def parse_request(request: str) -> dict:
             body = re.search(r"<!DOCTYPE html.*?</html>", request, re.DOTALL | re.IGNORECASE)
             response["body"] = body.group(0) if body else ""
         elif "text/plain" in response["headers"]["Content-Type"]:
-            response["body"] = request.split("\r\n\r\n", 1)[1]
+            response["body"] = request.split("\n\n", 1)[1]
         elif "application/json" in response["headers"]["Content-Type"]:
-            response["body"] = json.loads(request.split("\r\n\r\n", 1)[1])
+            response["body"] = json.loads(request.split("\n\n", 1)[1])
 
     elif response["code"][0] == '3':
         location = response["headers"]["Location"]
@@ -91,15 +121,16 @@ def parse_request(request: str) -> dict:
 
 
 def keyword_search(query: str) -> list:
-    response = make_http_request(f"http://www.duckduckgo.com/html?q={query}")
+    query = query.replace(" ", "+")
+    og_url = f"http://www.duckduckgo.com/html?q={query}&kp=1"
+    response = make_http_request(og_url)
     response = parse_request(response)
-    print(json.dumps(response, indent=4))
 
-    if response["code"] != "200":
+    if response["code"][0] != "2":
         raise Exception("Failed to make the request to the search engine.")
 
     soup = bs4.BeautifulSoup(response["body"], "html.parser")
-    results = soup.find_all("h3")
+    results = soup.find_all("h2")
 
     return results
 
@@ -107,22 +138,28 @@ def keyword_search(query: str) -> list:
 def main(args: list):
     if len(args) == 0:
         print_help()
+
         return
-    
+
     if args[0] == '-h':
         print_help()
+
         return
 
     if args[0] == '-u':
-        response = make_http_request(args[1])
+        og_url = args[1]
+        response = make_http_request(og_url)
         response = parse_request(response)
-        print(json.dumps(response["header"], indent=4))
+        print(json.dumps(response, indent=4))
+
         return
-    
+
     if args[0] == '-s':
-        search_results = keyword_search(args[1])
+        search_results = keyword_search(" ".join(args[1:]).replace(" ", "+"))
+
         for result in search_results:
             print(result)
+
         return
 
 
