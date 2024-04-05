@@ -107,7 +107,12 @@ def parse_request(request: str) -> dict:
         elif "text/plain" in response["headers"]["Content-Type"]:
             response["body"] = request.split("\n\n", 1)[1]
         elif "application/json" in response["headers"]["Content-Type"]:
-            response["body"] = json.loads(request.split("\n\n", 1)[1])
+            body = request.split("\n\n", 1)[1]
+            while body[0] not in ["{", "["]:
+                body = body[1:]
+            while body[-1] not in ["}", "]"]:
+                body = body[:-1]
+            response["body"] = body if body else ""
 
     elif response["code"][0] == '3':
         location = response["headers"]["Location"]
@@ -121,6 +126,11 @@ def parse_request(request: str) -> dict:
 
 
 def parse_body(response: dict) -> str:
+    if response["headers"]["Content-Type"] == "text/plain":
+        return response["body"]
+    if response["headers"]["Content-Type"] == "application/json":
+        return json.dumps(response["body"], indent=4)
+
     body = response["body"]
     soup = bs4.BeautifulSoup(body, "html.parser")
     text = soup.get_text()
@@ -131,13 +141,6 @@ def parse_body(response: dict) -> str:
     links = soup.find_all("a")
     for link in links:
         text += f"\n{link['href']}"
-
-    # images = soup.find_all("img")
-
-    # for image in images:
-    #     if url[-1] == "/":
-    #         url = url[:-1]
-    #     text += f"\n{url}{image['src']}"
 
     return text
 
